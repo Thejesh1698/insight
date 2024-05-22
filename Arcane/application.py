@@ -405,7 +405,6 @@ df = pd.DataFrame({
 #     # else:
 #     #     sample_df = df.sample(n=1)
 #     #
-#     # user_list = ["Amit", "Ravi", "Divyansh", "Thejesh", "Shubham"]
 #     # username = request.cookies.get('username', None)
 #
 #     # Gather statistics for chart

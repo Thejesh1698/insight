@@ -8,7 +8,7 @@ from TokenManager import TokenManager
 
 import numpy as np
 from anthropic import Anthropic
-parent_folder = '/Users/ravi.tej/Desktop/ML/Recommendations/slackSearch/'
+parent_folder = './Recommendations/slackSearch/'
 tree = ET.parse(parent_folder + '/conf/application.run.xml')
 root = tree.getroot()
 envs_element = root.find('./configuration/envs')
