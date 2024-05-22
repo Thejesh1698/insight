@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chitragupta</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .btn-outline {
+            background-color: white;
+            border: 1px solid black;
+            color: black;
+        }
+
+        .btn-success.active {
+            background-color: green !important;
+            color: white !important;
+        }
+
+        .btn-danger.active {
+            background-color: red !important;
+            color: white !important;
+        }
+    </style>
+    <script>
+        $(document).ready(function () {
+            $(".btn").click(function () {
+                $(this).siblings().removeClass("active");
+                $(this).addClass("active");
+            });
+
+            $("form").submit(function (e) {
+                if (!$("input[name='relevance']:checked").val() || !$("input[name='cleaned']:checked").val()) {
+                    alert("Please select both Relevance and Cleaned options before submitting.");
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</head>
+
+<body>
+
+<div class="container mt-5">
+    <div class="text-center mb-4">
+        <img src="{{ url_for('static', filename='chitragupta.png') }}" alt="Logo" width="50" class="mr-2">
+        <h3 class="d-inline-block">Chitragupta: Evaluate Scraped Articles</h3>
+    </div>
+
+    <div class="row">
+        <!-- Article Display and QC Options -->
+        <div class="col-md-8">
+            <form action="/submit_next_qc_article" method="post">
+                <input type="hidden" name="article_id" value="{{ article.article_id }}">
+                <input type="hidden" name="source_id" value="{{ article.source_id }}">
+                <input type="hidden" name="source_name" value="{{ article.source_name }}">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <strong>{{ article.source_name }}</strong> <span class="float-right text-muted small">ID: {{ article.article_id }}</span><br>
+                        <span class="font-weight-bold h5">{{ article.title }}</span> <a href="{{ article.url }}" target="_blank" class="small">(Link)</a>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ article.content }}</p>
+                        <hr>
+                        <div class="form-group text-center">
+                            <label>Relevance:</label>
+                            <input type="radio" name="relevance" value="True" id="relevanceYes" class="d-none">
+                            <label for="relevanceYes" class="btn btn-outline btn-success ml-2">Yes</label>
+                            <input type="radio" name="relevance" value="False" id="relevanceNo" class="d-none">
+                            <label for="relevanceNo" class="btn btn-outline btn-danger ml-2">No</label>
+                        </div>
+                        <div class="form-group text-center">
+                            <label>Cleaned:</label>
+                            <input type="radio" name="cleaned" value="True" id="cleanedYes" class="d-none">
+                            <label for="cleanedYes" class="btn btn-outline btn-success ml-2">Yes</label>
+                            <input type="radio" name="cleaned" value="False" id="cleanedNo" class="d-none">
+                            <label for="cleanedNo" class="btn btn-outline btn-danger ml-2">No</label>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center">
+                        <label for="sourceSelect" class="mr-2">Source:</label>
+                        <select id="sourceSelect" class="form-control d-inline-block" name="sourceSelect" style="width: 150px; display: inline-block;">
+                            <option value="Random" {% if source == 'Random' %} selected {% endif %}>Random</option>
+                            {% for src in stats.source_counts.keys() %}
+                            <option value="{{ src }}" {% if source == src %} selected {% endif %}>{{ src }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="submit" value="Submit & Next" class="btn btn-primary ml-2">
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- User Selection and Statistics -->
+        <div class="col-md-4">
+            <!-- User Selector -->
+            <div class="card mb-4">
+                <div class="card-header">User Selection</div>
+                <div class="card-body">
+                    <label for="userSelect">Select Your Name:</label>
+                    <select id="userSelect" class="form-control mb-4" name="userSelect">
+                        {% for user in user_list %}
+                            <option value="{{ user }}" {% if user == username %} selected {% endif %}>{{ user }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Statistics and Graphs -->
+            <div class="card">
+                <div class="card-header">Statistics</div>
+                <div class="card-body">
+                    <canvas id="sourceChart"></canvas>
+                    <script>
+                        var ctx = document.getElementById('sourceChart').getContext('2d');
+                        var sourceChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: Object.keys({{ stats.source_counts|tojson }}),
+                                datasets: [{
+                                    label: 'Clean',
+                                    data: Object.values({{ stats.clean_counts|tojson }}),
+                                    backgroundColor: 'Green',
+                                    stack: 'Stack 0'
+                                },
+                                {
+                                    label: 'Not Clean',
+                                    data: Object.values({{ stats.not_clean_counts|tojson }}),
+                                    backgroundColor: 'Red',
+                                    stack: 'Stack 0'
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

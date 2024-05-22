@@ -1,0 +1,94 @@
+-- CREATE TABLE slack_google_user_auth_tokens (
+--     id SERIAL PRIMARY KEY,
+--     user_id VARCHAR(255) NOT NULL UNIQUE,
+--     access_token TEXT NOT NULL,
+--     refresh_token TEXT NOT NULL,
+--     token_expiry TIMESTAMP NOT NULL,
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- );
+
+-- CREATE TABLE google_docs_texts (
+--     id SERIAL PRIMARY KEY,
+--     user_id VARCHAR(255) NOT NULL,
+--     doc_id VARCHAR(255) NOT NULL,
+--     doc_name VARCHAR(255) NOT NULL,
+--     doc_content TEXT,
+-- 	doc_source TEXT,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP
+-- );
+
+-- CREATE TABLE google_docs_texts (
+--     id SERIAL PRIMARY KEY,
+--     user_id VARCHAR(255) NOT NULL,
+--     doc_id VARCHAR(255) NOT NULL,
+--     doc_name VARCHAR(255) NOT NULL,
+--     doc_content TEXT,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     fts TSVECTOR GENERATED ALWAYS AS (TO_TSVECTOR('english', doc_content)) STORED,
+--     embedding VECTOR(384),
+--     UNIQUE (user_id, doc_id)
+-- );
+
+-- Create an index for the full-text search
+-- create index on google_docs_texts using gin(fts);
+
+-- Create an index for the semantic vector search
+-- create index on google_docs_texts using hnsw (embedding vector_ip_ops);
+
+CREATE OR REPLACE FUNCTION hybrid_search(
+    user_id VARCHAR(255),
+	query_text TEXT,
+    query_embedding VECTOR(512),
+    match_count INT,
+    full_text_weight FLOAT = 1,
+    semantic_weight FLOAT = 1,
+    rrf_k INT = 50
+)
+RETURNS SETOF google_docs_texts
+LANGUAGE SQL
+AS $$
+WITH full_text AS (
+    SELECT
+        id,
+        ROW_NUMBER() OVER (ORDER BY ts_rank_cd(fts, websearch_to_tsquery(query_text)) DESC) AS rank_ix
+    FROM
+        google_docs_texts
+    WHERE
+        user_id = hybrid_search.user_id AND
+        fts @@ websearch_to_tsquery(query_text)
+    ORDER BY rank_ix
+    LIMIT LEAST(match_count, 30) * 2
+),
+semantic AS (
+    SELECT
+        id,
+        ROW_NUMBER() OVER (ORDER BY 1 - (embedding <=> query_embedding) DESC) AS rank_ix
+    FROM
+        google_docs_texts
+    WHERE
+        user_id = hybrid_search.user_id
+    ORDER BY rank_ix
+    LIMIT LEAST(match_count, 30) * 2
+)
+SELECT
+    google_docs_texts.*
+FROM
+    full_text
+    FULL OUTER JOIN semantic ON full_text.id = semantic.id
+    JOIN google_docs_texts ON COALESCE(full_text.id, semantic.id) = google_docs_texts.id
+ORDER BY
+    COALESCE(1.0 / (rrf_k + full_text.rank_ix), 0.0) * full_text_weight +
+    COALESCE(1.0 / (rrf_k + semantic.rank_ix), 0.0) * semantic_weight
+DESC
+LIMIT
+    LEAST(match_count, 30);
+$$;
+
+
+
+
+
+-- DROP TABLE google_docs_texts

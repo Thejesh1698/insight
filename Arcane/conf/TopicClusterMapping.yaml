@@ -1,0 +1,3 @@
+max_a_prior_value: 5.0
+similarity_position_log: 5
+num_similar_topics: 10

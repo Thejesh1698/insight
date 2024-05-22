@@ -1,0 +1,11 @@
+pip==23.2.1
+boto3==1.26.76
+botocore==1.29.76
+Flask==2.2.2
+numpy==1.24.3
+pandas==2.0.3
+psycopg2-binary
+requests==2.31.0
+plotly==5.17.0
+umap-learn==0.5.3
+werkzeug==2.2.2

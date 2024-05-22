@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Computation</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        #loading {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Article cluster visualization</h1>
+
+    <!-- Loading message -->
+    <div id="loading">Loading... Please wait (Takes about 5 mins).</div>
+
+    <!-- Div to hold the Plotly plot -->
+    <div id="plot"></div>
+
+    <script>
+        function fetchData() {
+            $('#loading').show();  // Show the loading message
+
+            $.ajax({
+                url: '/create_umap_plot',
+                type: 'GET',
+                success: function(response) {
+                    $('#loading').hide();  // Hide the loading message
+                    console.log("Data received:", response);
+
+                    // Parse the JSON graph
+                    var graph = JSON.parse(response.graph);
+
+                    // Use Plotly to display the graph
+                    Plotly.newPlot('plot', graph.data, graph.layout);
+                },
+                error: function(error) {
+                    console.log("Error: ", error);
+                }
+            });
+        }
+
+        // Trigger the data fetch and plot rendering
+        fetchData();
+    </script>
+</body>
+</html>

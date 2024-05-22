@@ -1,0 +1,9 @@
+umap_n_neighbors: 32
+umap_n_components: 10
+clustering_model: 'hdbscan'
+hdbscan_metric: 'manhattan'
+kmeans_clusters: 25
+balanced_cluster_doc_limit: 10000
+hdbscan_min_cluster_size: 150
+hdbscan_min_samples: 15
+vectorizer: 'count_vectorizer'
